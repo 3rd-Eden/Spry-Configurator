@@ -24,6 +24,11 @@ class ds_data( db.Model ):
 		the Google Closure services when our memory cache gets invalid. This way we can check if we have 
 		a compiled version that we serve directly to the users.
 	'''
-	compiled = db.TextProperty( required=True ) # the compressed and compiled source code
-	md5 = db.StringProperty( required=True ) # used as tmp name for the file so we can compress it at once using the code_url param
+	# the compressed source code
+	compiled = db.TextProperty( required=True )
 	
+	# the combined source code
+	uncompiled = db.TextProperty( required=True )
+	
+	# used as tmp name for the file so we can compress it at once using the code_url param
+	md5 = db.StringProperty( required=True )
