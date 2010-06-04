@@ -38,16 +38,16 @@ class js(webapp.RequestHandler):
     	
         # Cancel processing if we don't have a valid request
         if not request:
-			self.error(404)
-			return
+		self.error(404)
+		return
 		
-		# handle 304 requests
-		# at a later stage we will allow the length to be specified in the url and parse it
-		# modifiedsince = datetime.datetime.strptime(self.request.headers.get('If-Modified-Since'), "%a, %d %b %Y %H: %M:%S GMT")
-		# for now everyrequest with a if-modified-since header will recieve a 304 as it passed our generation process
+	# handle 304 requests
+	# at a later stage we will allow the length to be specified in the url and parse it
+	# modifiedsince = datetime.datetime.strptime(self.request.headers.get('If-Modified-Since'), "%a, %d %b %Y %H: %M:%S GMT")
+	# for now everyrequest with a if-modified-since header will recieve a 304 as it passed our generation process
         if self.request.headers.get('If-Modified-Since'):
-			self.error(304)
-			return
+		self.error(304)
+		return
 			
         # We are trying to be as tolerant as possible
         # Remove double slashes to prevent pointless array
