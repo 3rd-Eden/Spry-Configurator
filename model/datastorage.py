@@ -25,7 +25,7 @@ class ds_data( db.Model ):
 		a compiled version that we serve directly to the users.
 	'''
 	# the compressed source code
-	compiled = db.TextProperty( required=True )
+	compiled = db.TextProperty( )
 	
 	# the combined source code
 	uncompiled = db.TextProperty( required=True )
