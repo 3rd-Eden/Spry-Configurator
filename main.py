@@ -128,6 +128,10 @@ class js(webapp.RequestHandler):
         storage = ds_data(md5=token,uncompiled=result)
         storage.compiled = "test"
         
+        # set our development flag if the user want to development builds instead of compressed builds
+        if "dev" in query:
+        	storage.dev = True
+        
         self.response.out.write( result )
         #storage.put()
 
