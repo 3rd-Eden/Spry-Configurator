@@ -26,12 +26,12 @@ class ds_data( db.Model ):
 	'''
 	# the compressed source code
 	compiled = db.TextProperty( )
-	
+
 	# the combined source code
 	uncompiled = db.TextProperty( required=True )
-	
+
 	# used as tmp name for the file so we can compress it at once using the code_url param
 	md5 = db.StringProperty( required=True )
-	
+
 	# this should be set if it's a development build
 	dev = db.BooleanProperty()
