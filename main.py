@@ -26,6 +26,7 @@ from google.appengine.ext.webapp import util
 
 # Custom module imports
 from model.datastorage import ds_data
+from cssmin import compressor
 
 class js(webapp.RequestHandler):
 	def get(self, path):
@@ -164,7 +165,16 @@ class js(webapp.RequestHandler):
 
 class css(webapp.RequestHandler):
 	def get(self, request):
-		self.response.out.write('Hello css!')
+	
+		self.response.headers['content-type'] = 'text/css'
+		concatenate = []
+		if os.path.isfile( 'css/1.6.1/spryaccordion.css' ):
+				concatenate.extend( open( 'css/1.6.1/spryaccordion.css','r' ).readlines() )
+		
+		css = ''.join( concatenate )
+		
+		yahoo = compressor().cssmin( css, 12 )
+		self.response.out.write( yahoo )
 
 class beacon(webapp.RequestHandler):
 	def get(self):
