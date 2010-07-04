@@ -33,37 +33,37 @@ class js(webapp.RequestHandler):
 
 		# Sign.. legacy code.. Supporting ?f= and ?files= from 
 		# version 1 and 2 of the configuration service.
-		request = self.request.get('f').lower() if self.request.get('f') else self.request.get('files') if self.request.get('files') else path
+		request = self.request.get( 'f' ).lower() if self.request.get( 'f' ) else self.request.get( 'files' ) if self.request.get( 'files' ) else path
 		
 		# Global timeout for memcached
 		memcached_timeout = 3600
 
 		# All action require a correct content-type, so we set it in advance.
-		self.response.headers['content-type'] = 'text/javascript'
+		self.response.headers[ 'content-type' ] = 'text/javascript'
 
 		# If we don't have a propper request, we are just going to quit and
 		# give a 404 error. No need to use pointless CPU cycles.
 		if not request:
-			self.error(404)
+			self.error( 404 )
 			return
 
 		# Handle 304 requests when a If-Modified header is present in the request. At a later
 		# stage we will allow the duration to be specified in the url and parse it using 
 		# modifiedsince = datetime.datetime.strptime(self.request.headers.get('If-Modified-Since'), "%a, %d %b %Y %H: %M:%S GMT")
-		if self.request.headers.get('If-Modified-Since'):
-			self.error(304)
+		if self.request.headers.get( 'If-Modified-Since' ):
+			self.error( 304 )
 			return
 
 		# We are trying to be as tolerant as possible
 		# Remove double slashes to prevent pointless array
 		# creating when we are converting the request
 		while request[-1] == "/":
-			request = request[:len(request)-1]
+			request = request[ :len(request)-1 ]
 
 		# Users do not need to prefix the files with Spry and
 		# we lowercase everything as the filenames are lowercase
 		# as well. Better one big .lower() than many .lower()
-		query = request.lower().replace('spry','').split('/')
+		query = request.lower().replace( 'spry', '' ).split( '/' )
 
 		# check for memcache hits so we can serve a correct request
 		# and have a clean token to use. Keys have a 250 char limit, so we hash
@@ -72,17 +72,17 @@ class js(webapp.RequestHandler):
 
 		# caching headers
 		expires = datetime.datetime.now() + datetime.timedelta(days=365)
-		self.response.headers['Last-Modified'] = datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")
-		self.response.headers["Cache-Control"] = "public, max-age=31536000"
-		self.response.headers["Expires"] = expires.strftime("%a, %d %b %Y %H:%M:%S GMT") 
+		self.response.headers['Last-Modified'] = datetime.datetime.now().strftime( "%a, %d %b %Y %H:%M:%S GMT" )
+		self.response.headers['Cache-Control'] = 'public, max-age=31536000'
+		self.response.headers['Expires'] = expires.strftime( "%a, %d %b %Y %H:%M:%S GMT" ) 
 
 		# Memory cache hit! \o/ return the content, we already set expire headers
 		if cache:
-			self.response.out.write(cache)
+			self.response.out.write( cache )
 			return
 
 		# Check if we have a compiled version in our dataset
-		storage = ds_data.all().filter('md5 = ', token ).get()
+		storage = ds_data.all().filter( 'md5 = ', token ).get()
 
 		if storage:
 			cache = storage.compiled if storage.compiled else storage.uncompiled
@@ -95,11 +95,11 @@ class js(webapp.RequestHandler):
 		concatenate = []
 		supported_versions = []
 		license = 'license/js.txt'
-		re_version = re.compile('^([0-9]{1,2}\.[0-9]{1}(\.[0-9]){0,4})$')
+		re_version = re.compile( '^([0-9]{1,2}\.[0-9]{1}(\.[0-9]){0,4})$' )
 
 		# Loop over the directorys in js to see which versions we currently support
 		# This gives us a list we can check again later on, aswell present us with the default version
-		for root, dirs, files in os.walk('js'):
+		for root, dirs, files in os.walk( 'js' ):
 			supported_versions.extend( dirs )
 
 		default_version = supported_versions[-1]
@@ -115,21 +115,24 @@ class js(webapp.RequestHandler):
 
 			# We are dealing with filename at this point, so we can savely construct a file location
 			# based on information we have gathered so far.
-			file_location = 'js/' + version + '/' + ( 'spry' if type != "xpath" else "" ) + type + ".js"
+			file_location = 'js/' + version + '/' + ( 'spry' if type != 'xpath' else '' ) + type + '.js'
 			
 			# See if it exists, and add it to our concatenate list
 			if os.path.isfile( file_location ):
 				concatenate.extend( open( file_location,'r' ).readlines() )
 
 		# compile the concatenate results to one "big" string
-		cache = "".join( concatenate )
+		cache = ''.join( concatenate )
 		
-		storage = ds_data(md5=token,uncompiled=cache)
+		if not cache:
+			return self.error( 404 )
+		
+		storage = ds_data( md5=token,uncompiled=cache )
 
 		# Set the development flag if the user want to use develpment builds instead of compressed build
 		# If this is not the case, use the Google Closure Service API to compile the code to a optimized piece
 		# of code. By using the Google Closure Service API we have access to the latest tips and tricks in compression
-		if "dev" in query:
+		if 'dev' in query:
 			storage.dev = True
 		else:
 			# Generate the parameters for the request
@@ -141,22 +144,22 @@ class js(webapp.RequestHandler):
 			])
 			
 			# Do the request to the google closure service
-			headers = { "Content-type": "application/x-www-form-urlencoded" }
-			conn = httplib.HTTPConnection('closure-compiler.appspot.com')
-			conn.request('POST', '/compile', params, headers)
+			headers = { 'Content-type': 'application/x-www-form-urlencoded' }
+			conn = httplib.HTTPConnection( 'closure-compiler.appspot.com' )
+			conn.request( 'POST', '/compile', params, headers )
 			
 			results = []
 			
 			# As the Google Closure destroys the default license headers we are going to add them back to the
 			# compiled source code.
 			if os.path.isfile(license):
-				results.extend( open(license,'r').readlines() )
+				results.extend( open(license,'r' ).readlines() )
 			
 			# Add the response to the results list
 			results.extend( conn.getresponse().read() )
 			
 			# Add it to our data storage
-			storage.compiled = "".join( results )
+			storage.compiled = ''.join( results )
 
 		# Store all results in our dataset and update our memcached layer
 		storage.put()
@@ -164,18 +167,129 @@ class js(webapp.RequestHandler):
 		self.response.out.write(storage.compiled if not storage.dev else cache)
 
 class css(webapp.RequestHandler):
-	def get(self, request):
-	
-		self.response.headers['content-type'] = 'text/css'
-		concatenate = []
-		if os.path.isfile( 'css/1.6.1/spryaccordion.css' ):
-				concatenate.extend( open( 'css/1.6.1/spryaccordion.css','r' ).readlines() )
-		
-		css = ''.join( concatenate )
-		
-		yahoo = compressor().cssmin( css, 12 )
-		self.response.out.write( yahoo )
+	def get(self, path):
 
+		# Sign.. legacy code.. Supporting ?f= and ?files= from 
+		# version 1 and 2 of the configuration service.
+		request = self.request.get( 'f' ).lower() if self.request.get( 'f' ) else self.request.get( 'files' ) if self.request.get( 'files' ) else path
+		
+		# Global timeout for memcached
+		memcached_timeout = 3600
+
+		# All action require a correct content-type, so we set it in advance.
+		self.response.headers[ 'content-type' ] = 'text/css'
+
+		# If we don't have a propper request, we are just going to quit and
+		# give a 404 error. No need to use pointless CPU cycles.
+		if not request:
+			self.error( 404 )
+			return
+
+		# Handle 304 requests when a If-Modified header is present in the request. At a later
+		# stage we will allow the duration to be specified in the url and parse it using 
+		# modifiedsince = datetime.datetime.strptime(self.request.headers.get('If-Modified-Since'), "%a, %d %b %Y %H: %M:%S GMT")
+		if self.request.headers.get( 'If-Modified-Since' ):
+			self.error( 304 )
+			return
+
+		# We are trying to be as tolerant as possible
+		# Remove double slashes to prevent pointless array
+		# creating when we are converting the request
+		while request[-1] == "/":
+			request = request[ :len(request)-1 ]
+
+		# Users do not need to prefix the files with Spry and
+		# we lowercase everything as the filenames are lowercase
+		# as well. Better one big .lower() than many .lower()
+		query = request.lower().replace( 'spry', '' ).split( '/' )
+
+		# check for memcache hits so we can serve a correct request
+		# and have a clean token to use. Keys have a 250 char limit, so we hash
+		token = hashlib.md5( ''.join(query) + "css" ).hexdigest()
+		cache = memcache.get(token)
+
+		# caching headers
+		expires = datetime.datetime.now() + datetime.timedelta(days=365)
+		self.response.headers['Last-Modified'] = datetime.datetime.now().strftime( "%a, %d %b %Y %H:%M:%S GMT" )
+		self.response.headers['Cache-Control'] = 'public, max-age=31536000'
+		self.response.headers['Expires'] = expires.strftime( "%a, %d %b %Y %H:%M:%S GMT" ) 
+
+		# Memory cache hit! \o/ return the content, we already set expire headers
+		if cache:
+			self.response.out.write( cache )
+			return
+
+		# Check if we have a compiled version in our dataset
+		storage = ds_data.all().filter( 'md5 = ', token ).get()
+
+		if storage:
+			cache = storage.compiled if storage.compiled else storage.uncompiled
+			memcache.add( token, cache, memcached_timeout )
+			self.response.out.write( cache )
+			return
+
+		# This is where the nitty gritty starts, we failed all caching options so we now have to generate
+		# the actual contents for the request.
+		concatenate = []
+		supported_versions = []
+		license = 'license/css.txt'
+		re_version = re.compile( '^([0-9]{1,2}\.[0-9]{1}(\.[0-9]){0,4})$' )
+
+		# Loop over the directorys in js to see which versions we currently support
+		# This gives us a list we can check again later on, aswell present us with the default version
+		for root, dirs, files in os.walk( 'css' ):
+			supported_versions.extend( dirs )
+
+		default_version = supported_versions[-1]
+		version = default_version
+
+		for type in query:
+			# Check if we are dealing with a filename or a version tag
+			# if we have a version check if we support that version, if not default to
+			# default version. And continue with the next item in the loop.
+			if re_version.match( type ):
+				version = type if type in supported_versions else default_version
+				continue
+
+			# We are dealing with filename at this point, so we can savely construct a file location
+			# based on information we have gathered so far.
+			file_location = 'css/' + version + '/' + 'spry' + type + '.css'
+			
+			# See if it exists, and add it to our concatenate list
+			if os.path.isfile( file_location ):
+				concatenate.extend( open( file_location,'r' ).readlines() )
+
+		# compile the concatenate results to one "big" string
+		cache = ''.join( concatenate )
+		
+		if not cache:
+			return self.error( 404 )
+		
+		storage = ds_data( md5=token,uncompiled=cache )
+
+		# Set the development flag if the user want to use develpment builds instead of compressed build
+		# If this is not the case, use the Google Closure Service API to compile the code to a optimized piece
+		# of code. By using the Google Closure Service API we have access to the latest tips and tricks in compression
+		if 'dev' in query:
+			storage.dev = True
+		else:
+			results = []
+			
+			# As our css compressor removes the license header, we are going to restore it
+			if os.path.isfile(license):
+				results.extend( open(license,'r' ).readlines() )
+			
+			# Add the compressed CSS to the results list, remove @charset utf-8 for safari <= 3.0 issues
+			results.extend( compressor().cssmin( cache, -1 ).replace( '@charset "UTF-8";', '' ) )
+			
+			# Add it to our data storage
+			storage.compiled = ''.join( results )
+
+		# Store all results in our dataset and update our memcached layer
+		storage.put()
+		memcache.add( token, storage.compiled if not storage.dev else cache, memcached_timeout )
+		self.response.out.write(storage.compiled if not storage.dev else cache)
+		
 class beacon(webapp.RequestHandler):
 	def get(self):
 		# Get the request token so we can get the correct result from the data set
