@@ -1,3 +1,10 @@
+# This is a python port of the CSS minification tool 
+# YUI Compressor
+# Author: Julien Lecomte - http://www.julienlecomte.net/
+# Copyright (c) 2009 Yahoo! Inc. All rights reserved.
+# The copyrights embodied in the content of this file are licensed
+# by Yahoo! Inc. under the BSD (revised) open source license.
+
 __author__ = "Arnout Kazemier (info@3rd-Eden.com)"
 __version__ = "1"
 __license__ = "BSD (revised) open source license"
